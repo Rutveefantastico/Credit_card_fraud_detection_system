@@ -22,7 +22,7 @@ legit_sample = legit.sample(n=len(fraud), random_state=2)
 data = pd.concat([legit_sample, fraud], axis=0)
 
 # Split into train and test sets
-X = data.drop(columns="Class", axis=1)
+X = data.drop(columns=["Class"])
 y = data["Class"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=2)
 
