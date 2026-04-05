@@ -52,6 +52,7 @@ The application is built using:
 ├── myproject.ipynb
 ├── requirements.txt
 ├── README.md
+├── Dataset link: [creditcard.csv](https://storage.googleapis.com/download.tensorflow.org/data/creditcard.csv)
 
 ---
 
@@ -94,4 +95,4 @@ Pull requests are welcome!
 ## 📬 Contact
 
 If you like this project, feel free to connect with me on LinkedIn.
-Link: https://www.linkedin.com/in/rutvee-yadav/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base_contact_details%3B%2BREMjAZwRzaKc%2BVWNji3nA%3D%3D
+[LinkedIn Link:](https://www.linkedin.com/in/rutvee-yadav/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base_contact_details%3B%2BREMjAZwRzaKc%2BVWNji3nA%3D%3D)
