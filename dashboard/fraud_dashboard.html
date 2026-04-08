@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Fraud Detection Intelligence Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #07090f;
+    color: #f0f4ff;
+    font-family: 'DM Sans', sans-serif;
+    padding: 24px 28px;
+    min-height: 100vh;
+  }
+  h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+  h1 span { color: #00e5ff; }
+
+  /* Header */
+  .header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .header-icon {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: linear-gradient(135deg, #ff3b6b, #00e5ff);
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .header-sub { font-size: 12px; color: #b0bcd4; margin-top: 3px; }
+
+  /* Filters */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+    background: #0e1117; border: 1px solid #1e2535; border-radius: 12px;
+    padding: 14px 18px; margin-bottom: 20px;
+  }
+  .filter-label { font-size: 11px; color: #b0bcd4; text-transform: uppercase; letter-spacing: 0.08em; }
+  .filter-group { display: flex; flex-direction: column; gap: 3px; }
+  .filter-group label { font-size: 10px; color: #b0bcd4; }
+  input[type=range] { accent-color: #00e5ff; cursor: pointer; width: 140px; }
+  select {
+    background: #121620; color: #f0f4ff; border: 1px solid #1e2535;
+    border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .class-btns { display: flex; gap: 6px; }
+  .class-btn {
+    padding: 4px 12px; border-radius: 6px; font-size: 11px; cursor: pointer;
+    font-weight: 600; border: 1px solid #1e2535; background: #121620;
+    color: #b0bcd4; font-family: 'DM Sans', sans-serif; transition: all 0.2s;
+  }
+  .class-btn.active-all    { background: #00e5ff; color: #000; border-color: transparent; }
+  .class-btn.active-fraud  { background: #ff3b6b; color: #000; border-color: transparent; }
+  .class-btn.active-normal { background: #00c896; color: #000; border-color: transparent; }
+  .filter-count { margin-left: auto; font-size: 11px; color: #b0bcd4; }
+  .filter-count span { color: #00e5ff; font-weight: 700; }
+
+  /* KPIs */
+  .kpi-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .kpi-card {
+    background: #121620; border: 1px solid #1e2535; border-radius: 12px;
+    padding: 18px 20px; flex: 1; min-width: 140px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .kpi-label { font-size: 11px; color: #b0bcd4; text-transform: uppercase; letter-spacing: 0.1em; }
+  .kpi-value { font-size: 28px; font-weight: 800; font-family: 'Space Mono', monospace; }
+  .kpi-sub   { font-size: 11px; color: #b0bcd4; }
+
+  /* Chart Cards */
+  .grid-3 { display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1.4fr; gap: 14px; margin-bottom: 14px; }
+  .grid-3b { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 14px; margin-bottom: 14px; }
+
+  .chart-card {
+    background: #121620; border: 1px solid #1e2535; border-radius: 12px; padding: 18px 20px;
+  }
+  .chart-title {
+    font-size: 11px; color: #b0bcd4; text-transform: uppercase;
+    letter-spacing: 0.08em; font-weight: 600; margin-bottom: 14px;
+  }
+  .chart-wrap { position: relative; width: 100%; }
+  .chart-wrap canvas { width: 100% !important; }
+
+  /* Confusion grid */
+  .conf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .conf-cell {
+    background: #0e1117; border-radius: 8px; padding: 12px 14px; text-align: center;
+  }
+  .conf-val { font-size: 22px; font-weight: 800; font-family: 'Space Mono', monospace; }
+  .conf-lbl { font-size: 10px; color: #b0bcd4; margin-top: 2px; }
+
+  /* Avg row */
+  .avg-row { display: flex; justify-content: space-around; margin-top: 8px; }
+  .avg-item { text-align: center; }
+  .avg-val { font-size: 16px; font-weight: 700; font-family: 'Space Mono', monospace; }
+  .avg-lbl { font-size: 10px; color: #b0bcd4; }
+
+  /* Scatter legend */
+  .scatter-legend { display: flex; gap: 12px; justify-content: center; font-size: 10px; color: #c8d6f0; margin-top: 4px; }
+
+  /* Heatmap */
+  .heatmap-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  .heatmap-table th { padding: 4px 6px; color: #c8d6f0; font-weight: 600; }
+  .heatmap-table td { padding: 6px 4px; text-align: center; font-family: 'Space Mono', monospace; font-size: 9px; border-radius: 4px; }
+  .heatmap-legend { display: flex; gap: 12px; justify-content: center; font-size: 9px; color: #c8d6f0; margin-top: 10px; }
+
+  /* Footer */
+  .footer { margin-top: 20px; text-align: center; font-size: 10px; color: #8a94a6; letter-spacing: 0.05em; }
+
+  @media (max-width: 900px) {
+    .grid-3, .grid-3b { grid-template-columns: 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-icon">🛡</div>
+  <div>
+    <h1>Fraud Detection <span>Intelligence</span> Dashboard</h1>
+    <div class="header-sub">Real-time transaction monitoring &amp; model evaluation</div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filters">
+  <span class="filter-label">⚙ Filters</span>
+  <div class="filter-group">
+    <label>Max Amount: $<span id="amountLabel">3000</span></label>
+    <input type="range" id="amountRange" min="100" max="3000" step="100" value="3000" oninput="updateDashboard()"/>
+  </div>
+  <div class="filter-group">
+    <label>Time Period</label>
+    <select id="timeFilter" onchange="updateDashboard()">
+      <option value="all">All Time</option>
+      <option value="day1">Day 1</option>
+      <option value="day2">Day 2</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <label>Transaction Class</label>
+    <div class="class-btns">
+      <button class="class-btn active-all" id="btn-all"    onclick="setClass('all')">All</button>
+      <button class="class-btn"            id="btn-fraud"  onclick="setClass('fraud')">Fraud</button>
+      <button class="class-btn"            id="btn-normal" onclick="setClass('normal')">Normal</button>
+    </div>
+  </div>
+  <div class="filter-count">Showing <span id="txnCount">800</span> transactions</div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-row">
+  <div class="kpi-card" style="border-top:3px solid #00e5ff">
+    <span class="kpi-label">📊 Total Transactions</span>
+    <span class="kpi-value" id="kpiTotal" style="color:#00e5ff">800</span>
+  </div>
+  <div class="kpi-card" style="border-top:3px solid #ff3b6b">
+    <span class="kpi-label">🚨 Total Fraud</span>
+    <span class="kpi-value" id="kpiFraud" style="color:#ff3b6b">0</span>
+    <span class="kpi-sub"  id="kpiFraudPct"></span>
+  </div>
+  <div class="kpi-card" style="border-top:3px solid #00c896">
+    <span class="kpi-label">✅ Normal Txns</span>
+    <span class="kpi-value" id="kpiNormal" style="color:#00c896">0</span>
+    <span class="kpi-sub"  id="kpiNormalPct"></span>
+  </div>
+  <div class="kpi-card" style="border-top:3px solid #ffb547">
+    <span class="kpi-label">🎯 Model Accuracy</span>
+    <span class="kpi-value" id="kpiAccuracy" style="color:#ffb547">0%</span>
+    <span class="kpi-sub"  id="kpiAccSub"></span>
+  </div>
+</div>
+
+<!-- Row 2 -->
+<div class="grid-3">
+  <div class="chart-card">
+    <div class="chart-title">1 · Fraud vs Normal Distribution</div>
+    <div class="chart-wrap" style="height:220px"><canvas id="donutChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">2 · Model Performance (Confusion Matrix)</div>
+    <div class="conf-grid" id="confGrid"></div>
+    <div class="chart-wrap" style="height:110px"><canvas id="confChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">3 · Avg Transaction Amount by Class</div>
+    <div class="chart-wrap" style="height:200px"><canvas id="amtChart"></canvas></div>
+    <div class="avg-row">
+      <div class="avg-item">
+        <div class="avg-val" id="avgNormalVal" style="color:#00c896">$0</div>
+        <div class="avg-lbl">Normal avg</div>
+      </div>
+      <div class="avg-item">
+        <div class="avg-val" id="avgFraudVal" style="color:#ff3b6b">$0</div>
+        <div class="avg-lbl">Fraud avg</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 3 -->
+<div class="grid-2">
+  <div class="chart-card">
+    <div class="chart-title">4 · Transaction Amount Distribution (Histogram)</div>
+    <div class="chart-wrap" style="height:210px"><canvas id="histChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">5 · Fraud Patterns Over Time (Hourly)</div>
+    <div class="chart-wrap" style="height:210px"><canvas id="timeChart"></canvas></div>
+  </div>
+</div>
+
+<!-- Row 4 -->
+<div class="grid-3b">
+  <div class="chart-card">
+    <div class="chart-title">6 · Feature Impact (V1 vs Amount)</div>
+    <div class="chart-wrap" style="height:200px"><canvas id="scatterChart"></canvas></div>
+    <div class="scatter-legend">
+      <span><span style="color:#00c896">●</span> Normal</span>
+      <span><span style="color:#ff3b6b">●</span> Fraud</span>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">7 · Fraud Amount Trend Over Time</div>
+    <div class="chart-wrap" style="height:200px"><canvas id="trendChart"></canvas></div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">9 · Feature Correlation Heatmap</div>
+    <div id="heatmapContainer"></div>
+    <div class="heatmap-legend">
+      <span><span style="color:#ff3b6b">■</span> Negative</span>
+      <span><span style="color:#8a94a6">■</span> Neutral</span>
+      <span><span style="color:#00e5ff">■</span> Positive</span>
+    </div>
+  </div>
+</div>
+
+<div class="footer" id="footer">FRAUD INTELLIGENCE SYSTEM</div>
+
+<script>
+// ── Data Generation ──────────────────────────────────────────────────────────
+const seed = s => { let x = Math.sin(s) * 10000; return x - Math.floor(x); };
+const rawData = Array.from({ length: 800 }, (_, i) => {
+  const isFraud = seed(i * 7 + 1) < 0.18;
+  const amount = isFraud ? 200 + seed(i * 3) * 2800 : 5 + seed(i * 11) * 295;
+  const time = Math.floor(seed(i * 17) * 172800);
+  const actual = isFraud ? 1 : 0;
+  const dp = isFraud ? seed(i * 5 + 3) : seed(i * 13 + 7);
+  const prediction = isFraud ? (dp > 0.22 ? 1 : 0) : (dp > 0.93 ? 1 : 0);
+  return {
+    id: i, actual, prediction,
+    amount: parseFloat(amount.toFixed(2)), time,
+    V1: (seed(i*2)-0.5)*10 + (isFraud?-2:1),
+    V2: (seed(i*4)-0.5)*8  + (isFraud?1.5:-0.5),
+    V3: (seed(i*6)-0.5)*9  + (isFraud?-1.8:0.8),
+    V4: (seed(i*8)-0.5)*7  + (isFraud?1.2:-0.3),
+  };
+});
+
+// ── State ────────────────────────────────────────────────────────────────────
+let classFilter = 'all';
+const fmt = n => n >= 1000 ? (n/1000).toFixed(1)+'k' : n;
+const pct = (n, d) => d ? ((n/d)*100).toFixed(1)+'%' : '0%';
+
+// Chart.js defaults
+Chart.defaults.color = '#c8d6f0';
+Chart.defaults.borderColor = '#1e2535';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+const TT = {
+  backgroundColor: '#151d2e',
+  borderColor: '#2e3f5c',
+  borderWidth: 1,
+  titleColor: '#e8f0ff',
+  bodyColor: '#c8d6f0',
+  padding: 10,
+  cornerRadius: 8,
+};
+
+// ── Chart Instances ──────────────────────────────────────────────────────────
+let charts = {};
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+// ── Filter Data ──────────────────────────────────────────────────────────────
+function getFiltered() {
+  const amountMax = +document.getElementById('amountRange').value;
+  const timeFilter = document.getElementById('timeFilter').value;
+  return rawData.filter(d => {
+    if (d.amount > amountMax) return false;
+    if (timeFilter === 'day1' && d.time > 86400) return false;
+    if (timeFilter === 'day2' && d.time <= 86400) return false;
+    if (classFilter === 'fraud'  && d.actual !== 1) return false;
+    if (classFilter === 'normal' && d.actual !== 0) return false;
+    return true;
+  });
+}
+
+// ── Main Update ──────────────────────────────────────────────────────────────
+function updateDashboard() {
+  document.getElementById('amountLabel').textContent = document.getElementById('amountRange').value;
+  const data = getFiltered();
+  const total   = data.length;
+  const fraud   = data.filter(d => d.actual === 1).length;
+  const normal  = total - fraud;
+  const correct = data.filter(d => d.prediction === d.actual).length;
+  const accuracy = total > 0 ? ((correct/total)*100).toFixed(1) : '0.0';
+
+  // KPIs
+  document.getElementById('txnCount').textContent    = total.toLocaleString();
+  document.getElementById('kpiTotal').textContent    = fmt(total);
+  document.getElementById('kpiFraud').textContent    = fraud;
+  document.getElementById('kpiFraudPct').textContent = pct(fraud, total) + ' of total';
+  document.getElementById('kpiNormal').textContent   = fmt(normal);
+  document.getElementById('kpiNormalPct').textContent= pct(normal, total) + ' of total';
+  document.getElementById('kpiAccuracy').textContent = accuracy + '%';
+  document.getElementById('kpiAccSub').textContent   = correct + ' correct predictions';
+  document.getElementById('footer').textContent      =
+    `FRAUD INTELLIGENCE SYSTEM · MODEL ACCURACY ${accuracy}% · ${total.toLocaleString()} TRANSACTIONS ANALYZED`;
+
+  // 1. Donut
+  destroyChart('donut');
+  charts.donut = new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Normal', 'Fraud'],
+      datasets: [{ data: [normal, fraud], backgroundColor: ['#00c896','#ff3b6b'], borderWidth: 2, borderColor: '#121620', hoverOffset: 6 }]
+    },
+    options: {
+      cutout: '60%', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#c8d6f0', font: { size: 12 }, usePointStyle: true } },
+        tooltip: { ...TT }
+      }
+    }
+  });
+
+  // 2. Confusion Matrix
+  const tp = data.filter(d => d.actual===1 && d.prediction===1).length;
+  const tn = data.filter(d => d.actual===0 && d.prediction===0).length;
+  const fp = data.filter(d => d.actual===0 && d.prediction===1).length;
+  const fn = data.filter(d => d.actual===1 && d.prediction===0).length;
+  const confItems = [
+    {label:'True Neg', value:tn, color:'#00c896'},
+    {label:'False Pos',value:fp, color:'#ffb547'},
+    {label:'False Neg',value:fn, color:'#ff3b6b'},
+    {label:'True Pos', value:tp, color:'#00e5ff'},
+  ];
+  const confGrid = document.getElementById('confGrid');
+  confGrid.innerHTML = confItems.map(c => `
+    <div class="conf-cell" style="border:1px solid ${c.color}33">
+      <div class="conf-val" style="color:${c.color}">${c.value}</div>
+      <div class="conf-lbl">${c.label}</div>
+    </div>`).join('');
+
+  destroyChart('conf');
+  charts.conf = new Chart(document.getElementById('confChart'), {
+    type: 'bar',
+    data: {
+      labels: confItems.map(c => c.label),
+      datasets: [{ data: confItems.map(c => c.value), backgroundColor: confItems.map(c => c.color), borderRadius: 4, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { ...TT } },
+      scales: {
+        x: { ticks: { color: '#c8d6f0', font:{size:9} }, grid: { color: '#1e2535' } },
+        y: { ticks: { color: '#c8d6f0', font:{size:9} }, grid: { color: '#1e2535' } }
+      }
+    }
+  });
+
+  // 3. Avg Amount
+  const amtNormal = data.filter(d => d.actual===0);
+  const amtFraud  = data.filter(d => d.actual===1);
+  const avgN = amtNormal.length ? (amtNormal.reduce((s,d)=>s+d.amount,0)/amtNormal.length).toFixed(2) : 0;
+  const avgF = amtFraud.length  ? (amtFraud.reduce((s,d)=>s+d.amount,0)/amtFraud.length).toFixed(2)   : 0;
+  document.getElementById('avgNormalVal').textContent = '$'+avgN;
+  document.getElementById('avgFraudVal').textContent  = '$'+avgF;
+  destroyChart('amt');
+  charts.amt = new Chart(document.getElementById('amtChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Normal','Fraud'],
+      datasets: [{ data: [parseFloat(avgN), parseFloat(avgF)], backgroundColor: ['#00c896','#ff3b6b'], borderRadius: 6, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend:{display:false}, tooltip:{ ...TT, callbacks:{ label: ctx => ' $'+ctx.raw } } },
+      scales: {
+        x: { ticks:{color:'#c8d6f0'}, grid:{color:'#1e2535'} },
+        y: { ticks:{color:'#c8d6f0', callback: v=>'$'+v}, grid:{color:'#1e2535'} }
+      }
+    }
+  });
+
+  // 4. Histogram
+  const buckets = Array.from({length:12},(_,i)=>({range:`${i*250}–${(i+1)*250}`,count:0}));
+  data.forEach(d => { const b=Math.min(11,Math.floor(d.amount/250)); buckets[b].count++; });
+  destroyChart('hist');
+  charts.hist = new Chart(document.getElementById('histChart'), {
+    type: 'bar',
+    data: {
+      labels: buckets.map(b=>b.range),
+      datasets: [{ data: buckets.map(b=>b.count), backgroundColor: 'rgba(0,229,255,0.75)', borderRadius: 3, borderSkipped: false }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend:{display:false}, tooltip:{...TT} },
+      scales: {
+        x: { ticks:{color:'#c8d6f0',font:{size:8},maxRotation:30}, grid:{color:'#1e2535'} },
+        y: { ticks:{color:'#c8d6f0'}, grid:{color:'#1e2535'} }
+      }
+    }
+  });
+
+  // 5. Time pattern
+  const timeSlots = Array.from({length:24},(_,h)=>({h:h,fraud:0,normal:0}));
+  data.forEach(d => {
+    const h = Math.floor((d.time%86400)/3600);
+    if(d.actual===1) timeSlots[h].fraud++; else timeSlots[h].normal++;
+  });
+  destroyChart('time');
+  charts.time = new Chart(document.getElementById('timeChart'), {
+    type: 'line',
+    data: {
+      labels: timeSlots.map(t=>t.h+'h'),
+      datasets: [
+        { label:'Fraud',  data: timeSlots.map(t=>t.fraud),  borderColor:'#ff3b6b', backgroundColor:'rgba(255,59,107,0.1)', borderWidth:2, pointRadius:0, fill:true, tension:0.4 },
+        { label:'Normal', data: timeSlots.map(t=>t.normal), borderColor:'#00c896', backgroundColor:'rgba(0,200,150,0.07)', borderWidth:1.5, pointRadius:0, fill:true, tension:0.4, borderDash:[4,4] }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend:{ labels:{color:'#c8d6f0',usePointStyle:true,font:{size:11}} }, tooltip:{...TT} },
+      scales: {
+        x: { ticks:{color:'#c8d6f0',font:{size:9},maxTicksLimit:12}, grid:{color:'#1e2535'} },
+        y: { ticks:{color:'#c8d6f0'}, grid:{color:'#1e2535'} }
+      }
+    }
+  });
+
+  // 6. Scatter
+  const scatter = data.slice(0,200).map(d=>({x:parseFloat(d.V1.toFixed(2)),y:parseFloat(d.amount.toFixed(2)),type:d.actual}));
+  destroyChart('scatter');
+  charts.scatter = new Chart(document.getElementById('scatterChart'), {
+    type: 'scatter',
+    data: {
+      datasets: [
+        { label:'Normal', data: scatter.filter(d=>d.type===0).map(d=>({x:d.x,y:d.y})), backgroundColor:'rgba(0,200,150,0.45)', pointRadius:3 },
+        { label:'Fraud',  data: scatter.filter(d=>d.type===1).map(d=>({x:d.x,y:d.y})), backgroundColor:'rgba(255,59,107,0.8)',  pointRadius:3 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend:{display:false}, tooltip:{...TT, callbacks:{ label: ctx => ` V1: ${ctx.parsed.x}, Amt: $${ctx.parsed.y}` }} },
+      scales: {
+        x: { title:{display:true,text:'V1',color:'#c8d6f0',font:{size:10}}, ticks:{color:'#c8d6f0',font:{size:9}}, grid:{color:'#1e2535'} },
+        y: { title:{display:true,text:'Amount',color:'#c8d6f0',font:{size:10}}, ticks:{color:'#c8d6f0',font:{size:9}}, grid:{color:'#1e2535'} }
+      }
+    }
+  });
+
+  // 7. Fraud trend
+  const fraudTrend = data.filter(d=>d.actual===1).sort((a,b)=>a.time-b.time).slice(0,60).map((d,i)=>({x:i,y:d.amount}));
+  const avgFNum = parseFloat(avgF);
+  destroyChart('trend');
+  charts.trend = new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+      datasets: [
+        { label:'Fraud Amount', data: fraudTrend, borderColor:'#ff3b6b', backgroundColor:'rgba(255,59,107,0.1)', borderWidth:2, pointRadius:0, fill:true, tension:0.3, parsing:{xAxisKey:'x',yAxisKey:'y'} },
+        { label:'Avg', data: fraudTrend.map(d=>({x:d.x,y:avgFNum})), borderColor:'#ffb547', borderWidth:1.5, borderDash:[4,4], pointRadius:0, parsing:{xAxisKey:'x',yAxisKey:'y'} }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend:{labels:{color:'#c8d6f0',usePointStyle:true,font:{size:10}}}, tooltip:{...TT, callbacks:{label:ctx=>' $'+ctx.parsed.y.toFixed(2)}} },
+      scales: {
+        x: { title:{display:true,text:'Fraud #',color:'#c8d6f0',font:{size:10}}, ticks:{color:'#c8d6f0',font:{size:9}}, grid:{color:'#1e2535'} },
+        y: { ticks:{color:'#c8d6f0',callback:v=>'$'+v,font:{size:9}}, grid:{color:'#1e2535'} }
+      }
+    }
+  });
+
+  // 9. Correlation Heatmap
+  const cols = ['V1','V2','V3','V4','Amount'];
+  const corrMatrix = cols.map(a => cols.map(b => {
+    if (a===b) return 1;
+    const xs = data.map(d => a==='Amount'?d.amount:d[a]);
+    const ys = data.map(d => b==='Amount'?d.amount:d[b]);
+    const mx = xs.reduce((s,x)=>s+x,0)/xs.length;
+    const my = ys.reduce((s,y)=>s+y,0)/ys.length;
+    const num = xs.reduce((s,x,i)=>s+(x-mx)*(ys[i]-my),0);
+    const den = Math.sqrt(xs.reduce((s,x)=>s+(x-mx)**2,0)*ys.reduce((s,y)=>s+(y-my)**2,0));
+    return den===0?0:parseFloat((num/den).toFixed(2));
+  }));
+  const corrColor = v => {
+    const a = Math.abs(v);
+    if (v>0.5)  return `rgba(0,229,255,${(0.3+a*0.7).toFixed(2)})`;
+    if (v<-0.5) return `rgba(255,59,107,${(0.3+a*0.7).toFixed(2)})`;
+    return `rgba(74,85,104,${(0.2+a*0.5).toFixed(2)})`;
+  };
+  const hc = document.getElementById('heatmapContainer');
+  let html = '<table class="heatmap-table"><thead><tr><th></th>';
+  cols.forEach(c => html += `<th>${c}</th>`);
+  html += '</tr></thead><tbody>';
+  corrMatrix.forEach((row, ri) => {
+    html += `<tr><td style="color:#c8d6f0;font-weight:600;padding:4px 6px">${cols[ri]}</td>`;
+    row.forEach(val => {
+      const txtColor = Math.abs(val) > 0.45 ? '#000' : '#e8f0ff';
+      html += `<td style="background:${corrColor(val)};color:${txtColor}">${val.toFixed(2)}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  hc.innerHTML = html;
+}
+
+function setClass(v) {
+  classFilter = v;
+  ['all','fraud','normal'].forEach(id => {
+    const btn = document.getElementById('btn-'+id);
+    btn.className = 'class-btn' + (id===v ? ` active-${id}` : '');
+  });
+  updateDashboard();
+}
+
+// Init
+updateDashboard();
+</script>
+</body>
+</html>
